@@ -12,8 +12,11 @@
 // Comment out if zlib support is not available (support for adz will not work)
 #define	_HAVE_ZLIB
 
-#include <libc.h>
-#include <sys/_endian.h>
+#include <stdio.h>
+#include <time.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <unistd.h>
@@ -361,7 +364,7 @@ int crunch_rle(unsigned char *source, unsigned char *source_end,
 				totalbytes++;
 				rletotalbytes++;
 			}
-			// Count is 0 than this is a literal É character
+			// Count is 0 than this is a literal ï¿½ character
 			if(count == 0) {
 				*destination++ = temp;
 				// And we've saved one rle byte
@@ -1738,7 +1741,7 @@ FILE *undmsfile(char *inputfile,int endsector, unsigned int debug, FILE *debugfi
 } // End function undmsfile
 
 
-int main(int argc,char **argv) {
+int main_c(int argc,char **argv) {
 	// The Filepointer used to write the file to the disk
 	FILE *f;
 	// Temporary variables
