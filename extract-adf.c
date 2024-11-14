@@ -1867,15 +1867,18 @@ FILE *undmsfile(char *inputfile, int endsector, unsigned int debug,
   return outfile;
 } // End function undmsfile
 
-int main_c(int argc, char **argv) {
+int main_c(int debug, int format, 
+  int startsector,
+  unsigned int endsector,
+  const char *inpfilename,
+  const char *outfilename
+) {
   // The Filepointer used to write the file to the disk
   FILE *f;
   // Temporary variables
   int i = 0;
   int j = 0;
   int n = 0;
-  // Type of file, 0 is unset (determined by filename, or exit if unsuccesful)
-  int format = 0;
   // A integer to store whether the file is an orphan
   int orphan = 0;
   // A integer to store whether the filename or parent path name is a legal
@@ -1918,13 +1921,6 @@ int main_c(int argc, char **argv) {
   /* A integer to store the root and orphan directories */
   int root = 0;
   int orphandir = 0;
-  /* A integer to hold the start sector, defaults to the defined value
-   * FIRST_SECTOR */
-  int startsector = FIRST_SECTOR;
-  /* A integer to hold the last sector, defaults to the defined value SECTORS */
-  unsigned int endsector = SECTORS;
-  /* Variable to hold the debugging value */
-  int debug = DEBUG;
   // int to read option value from getopt and a temp variable to read in the
   // option index
   int optionflag;
@@ -1982,70 +1978,22 @@ int main_c(int argc, char **argv) {
 
   // Read the passed options if any (-d sets debug, -o sets an optional filename
   // to pipe the output to)
-  while ((optionflag = getopt(argc, argv, "adzDo:s:e:")) != -1)
-    switch (optionflag) {
-    // ADF format forced
-    case 'a':
-      format = 1;
-      break;
-    // ADZ format forced
-    case 'z':
-      format = 2;
-      break;
-    // DMS format forced
-    case 'd':
-      format = 3;
-      break;
-    // Debug flag is set to on
-    case 'D':
-      debug = 1;
-      break;
-    // Output file flag is specified
-    case 'o':
-      outfile = fopen(optarg, "w");
-      // If output file didn't open, error occured, print error, exit
-      if (outfile == NULL) {
-        fprintf(
-            stderr,
-            "Can't open output file %s for writing, error returned was: %s\n",
-            optarg, strerror(errno));
-        return 1;
-      } else {
-        // Announce that we're writing the output to a file on stdout
-        fprintf(stdout, "Writing output to %s\n", optarg);
-      }
-      break;
-    // Start sector is specified
-    case 's':
-      i = strtoimax(optarg, NULL, 10);
-      // Not an integer or value over 3520 (last sector on a HD adf), print
-      // usage
-      if (i > 3520 || i < 0 || i > endsector) {
-        usage(argv[0]);
-        return 2;
-        // Otherwise set the start sector
-      } else {
-        startsector = i;
-      }
-      break;
-    case 'e':
-      i = strtoimax(optarg, NULL, 10);
-      // Not an integer or value over 3520 (last sector on a HD adf), print
-      // usage
-      if (i > 3520 || i < 0 || i < startsector) {
-        usage(argv[0]);
-        return 2;
-        // Otherwise set the end sector
-      } else {
-        endsector = i;
-      }
-      break;
-    // Missing argument to o,s or e
-    case '?':
-      usage(argv[0]);
-      return 2;
-      break;
+
+  if (outfilename != NULL) {
+    outfile = fopen(outfilename, "w");
+    // If output file didn't open, error occured, print error, exit
+    if (outfile == NULL) {
+      fprintf(
+          stderr,
+          "Can't open output file %s for writing, error returned was: %s\n",
+          outfilename, strerror(errno));
+      return 1;
+    } else {
+      // Announce that we're writing the output to a file on stdout
+      fprintf(stdout, "Writing output to %s\n", outfilename);
     }
+  }
+
   // Check if outfile is set, if not set outfile as stdout
   if (outfile == NULL)
     outfile = stdout;
@@ -2060,9 +2008,9 @@ int main_c(int argc, char **argv) {
       fprintf(outfile, "File format is DMS\n");
   }
   // The filename should be the last non-option argument given
-  for (index = optind; index < argc; index++) {
+  if (inpfilename != NULL) {
     // Copy argument into the filename variable
-    snprintf(filename, MAX_FILENAME_LENGTH - 1, "%s", argv[index]);
+    snprintf(filename, MAX_FILENAME_LENGTH - 1, "%s", inpfilename);
     // Try opening the file for reading...
     f = fopen(filename, "r");
     if (f == NULL) {
@@ -2076,12 +2024,12 @@ int main_c(int argc, char **argv) {
       // If format not already set, determine format from file ending
       if (!format) {
         if (debug)
-          fprintf(outfile, "Input filename is %s\n", argv[index]);
+          fprintf(outfile, "Input filename is %s\n", inpfilename);
         // Get the extension of the file
-        extension = strrchr(argv[index], '.');
+        extension = strrchr(inpfilename, '.');
         // No extension, assume ADF
         if (extension == NULL) {
-          fprintf(outfile, "No file extension, assuming ADF");
+          fprintf(outfile, "No file extension, assuming ADF\n");
           format = 1;
         } else {
           if (debug)
@@ -2132,7 +2080,6 @@ int main_c(int argc, char **argv) {
   }
   // No file given, print usage instructions
   if (f == NULL) {
-    usage(argv[0]);
     return 2;
   }
   // Define and allocate memory for the sectors
